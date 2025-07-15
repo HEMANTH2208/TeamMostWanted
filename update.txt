@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Code Auditor</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f4f7f6;
+        color: #333;
+      }
+      .container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 30px;
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      }
+      h1 {
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      p {
+        text-align: center;
+        margin-bottom: 30px;
+        color: #666;
+      }
+      input[type="text"] {
+        width: calc(100% - 22px);
+        padding: 12px;
+        margin-bottom: 20px;
+        border: 1px solid #cccccc;
+        border-radius: 6px;
+        font-size: 1rem;
+        box-sizing: border-box; /* Ensures padding doesn't add to total width */
+      }
+      button {
+        display: block;
+        width: 100%;
+        padding: 12px 15px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1.1rem;
+        transition: background-color 0.3s ease;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+      #results {
+        margin-top: 30px;
+        white-space: pre-wrap; /* Preserves whitespace and line breaks */
+        background-color: #f9f9f9;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #e5e5e5;
+        min-height: 150px; /* Give some initial height */
+        font-family: "Consolas", "Courier New", monospace; /* Monospace for code/logs */
+        font-size: 0.9rem;
+        overflow-x: auto; /* Allow horizontal scrolling for wide content */
+      }
+      .loading {
+        display: none; /* Hidden by default */
+        margin-top: 15px;
+        text-align: center;
+        color: #555;
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>AI Code Auditor</h1>
+      <p>
+        Enter a GitHub repository URL to analyze, Dockerize, and test it
+        automatically.
+      </p>
+      <input
+        type="text"
+        id="githubRepoUrl"
+        placeholder="e.g., https://github.com/owner/repo"
+      />
+      <button id="analyzeButton" onclick="startAnalysis()">
+        Analyze Repository
+      </button>
+      <div class="loading" id="loadingMessage">
+        Processing... This might take a few minutes.
+      </div>
+      <div id="results"></div>
+    </div>
+
+    <script>
+      async function startAnalysis() {
+        const repoUrlInput = document.getElementById("githubRepoUrl");
+        const analyzeButton = document.getElementById("analyzeButton");
+        const resultsDiv = document.getElementById("results");
+        const loadingMessage = document.getElementById("loadingMessage");
+
+        const repoUrl = repoUrlInput.value.trim(); // Trim whitespace
+
+        if (!repoUrl) {
+          resultsDiv.innerText = "Please enter a GitHub repository URL.";
+          return;
+        }
+
+        // Disable input and button, show loading message
+        repoUrlInput.disabled = true;
+        analyzeButton.disabled = true;
+        resultsDiv.innerText = ""; // Clear previous results
+        loadingMessage.style.display = "block";
+
+        try {
+          // Adjust the URL if your backend is on a different host/port
+          const response = await fetch("/analyze", {
+            // Assumes backend is on the same domain/port, or adjust to "http://localhost:5000/analyze"
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ repo_url: repoUrl }),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text(); // Get raw error text from backend
+            throw new Error(
+              `HTTP error! Status: ${response.status}. Message: ${
+                errorText || "Unknown error"
+              }`
+            );
+          }
+
+          const data = await response.json();
+          resultsDiv.innerText =
+            data.report ||
+            "No report generated. Check server logs for details.";
+        } catch (error) {
+          resultsDiv.innerText = `Error during analysis: ${error.message}. Please check the URL and ensure the backend server is running and accessible.`;
+          console.error("Fetch error:", error);
+        } finally {
+          // Re-enable input and button, hide loading message
+          repoUrlInput.disabled = false;
+          analyzeButton.disabled = false;
+          loadingMessage.style.display = "none";
+        }
+      }
+    </script>
+  </body>
+</html>
